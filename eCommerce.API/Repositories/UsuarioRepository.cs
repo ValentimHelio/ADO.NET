@@ -66,7 +66,9 @@ namespace eCommerce.API.Repositories
             try
             {
                 SqlCommand command = new SqlCommand();
-                command.CommandText = "SELECT * FROM Usuarios WHERE Id = @Id";
+                command.CommandText = "SELECT * FROM Usuarios u " +
+                            " LEFT JOIN Contatos c  ON c.UsuarioId = u.Id" +
+                            " WHERE u.Id = @Id";
                 command.Parameters.AddWithValue("@Id", id);
                 command.Connection = (SqlConnection)_connection;
 
@@ -77,7 +79,7 @@ namespace eCommerce.API.Repositories
                 while (dataReader.Read())
                 {
                     Usuario usuarario = new Usuario();
-                    usuarario.Id = dataReader.GetInt32("Id");
+                    usuarario.Id = dataReader.GetInt32(0);
                     usuarario.Nome = dataReader.GetString("Nome");
                     usuarario.Email = dataReader.GetString("Email");
                     usuarario.Sexo = dataReader.GetString("Sexo");
@@ -86,6 +88,15 @@ namespace eCommerce.API.Repositories
                     usuarario.NomeMae = dataReader.GetString("NomeMae");
                     usuarario.SituacaoCadastro = dataReader.GetString("SituacaoCadastro");
                     usuarario.DataCadastro = dataReader.GetDateTimeOffset(8);
+
+
+                    Contato contato = new Contato();
+                    contato.Id = dataReader.GetInt32(9);
+                    contato.UsuarioId = usuarario.Id;
+                    contato.Telefone = dataReader.GetString("Telefone");
+                    contato.Celular = dataReader.GetString("Celular");
+
+                    usuarario.Contato = contato;
 
                     return usuarario;
                 }
