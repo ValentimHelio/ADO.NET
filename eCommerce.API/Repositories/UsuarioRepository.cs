@@ -183,6 +183,25 @@ namespace eCommerce.API.Repositories
                 command.Parameters.AddWithValue("@Celular", usuario.Contato.Celular);
                 usuario.Contato.Id = (int)command.ExecuteScalar();
                 usuario.Contato.UsuarioId = usuario.Id;
+
+                foreach (var item in usuario.EnderecosEntrega)
+                {
+                    command.CommandText = "INSERT INTO EnderecosEntrega (UsuarioId, NomeEndereco, CEP, Estado, Cidade, Bairro, Endereco, Numero, Complemento) " +
+                            " VALUES (@UsuarioId, @NomeEndereco, @CEP, @Estado, @Cidade, @Bairro, @Endereco, @Numero, @Complemento); SELECT CAST(scope_identity() AS int) ";
+
+                    //command.Parameters.AddWithValue("@UsuarioId", usuario.Id);
+                    command.Parameters.AddWithValue("@NomeEndereco", item.NomeEndereco);
+                    command.Parameters.AddWithValue("@CEP", item.CEP);
+                    command.Parameters.AddWithValue("@Estado", item.Estado);
+                    command.Parameters.AddWithValue("@Cidade", item.Cidade);
+                    command.Parameters.AddWithValue("@Bairro", item.Bairro);
+                    command.Parameters.AddWithValue("@Endereco", item.Endereco);
+                    command.Parameters.AddWithValue("@Numero", item.Numero);
+                    command.Parameters.AddWithValue("@Complemento", item.Complemento);
+
+                    item.Id = (int)command.ExecuteScalar(); 
+                    item.UsuarioId = usuario.Id;
+                }
             }
             finally
             {
