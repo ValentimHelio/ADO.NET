@@ -169,17 +169,14 @@ namespace eCommerce.API.Repositories
                 command.Connection = (SqlConnection)_connection;
 
                 command.CommandText = "INSERT INTO Usuarios(Nome, Email, Sexo, RG, CPF, NomeMae, SituacaoCadastro, DataCadastro) VALUES (@Nome, @Email, @Sexo, @RG, @CPF, @NomeMae, @SituacaoCadastro, @DataCadastro);SELECT CAST(scope_identity() AS int)";
-
-
                 command.Parameters.AddWithValue("@Nome", usuario.Nome);
                 command.Parameters.AddWithValue("@Email", usuario.Email);
                 command.Parameters.AddWithValue("@Sexo", usuario.Sexo);
-                command.Parameters.AddWithValue("@RG", usuario.RG);
+                command.Parameters.AddWithValue("@RG", usuario.Rg);
                 command.Parameters.AddWithValue("@CPF", usuario.CPF);
                 command.Parameters.AddWithValue("@NomeMae", usuario.NomeMae);
                 command.Parameters.AddWithValue("@SituacaoCadastro", usuario.SituacaoCadastro);
                 command.Parameters.AddWithValue("@DataCadastro", usuario.DataCadastro);
-
 
                 usuario.Id = (int)command.ExecuteScalar();
 
