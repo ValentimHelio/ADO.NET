@@ -2,6 +2,7 @@
 using eCommerce.API.Models;
 using Microsoft.Data.SqlClient;
 using Microsoft.Win32.SafeHandles;
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
@@ -159,64 +160,85 @@ namespace eCommerce.API.Repositories
 
         public void Insert(Usuario usuario)
         {
+            _connection.Open();
+            SqlTransaction transaction = (SqlTransaction)_connection.BeginTransaction();
             try
             {
                 SqlCommand command = new SqlCommand();
-                command.CommandText = "INSERT INTO Usuarios(Nome, Email, Sexo, RG, CPF, NomeMae, SituacaoCadastro, DataCadastro) " +
-                    " VALUES (@Nome, @Email, @Sexo, @RG, @CPF, @NomeMae, @SituacaoCadastro, @DataCadastro); SELECT CAST(scope_identity() AS int) ";
+                command.Transaction = transaction;
                 command.Connection = (SqlConnection)_connection;
+
+                command.CommandText = "INSERT INTO Usuarios(Nome, Email, Sexo, RG, CPF, NomeMae, SituacaoCadastro, DataCadastro) VALUES (@Nome, @Email, @Sexo, @RG, @CPF, @NomeMae, @SituacaoCadastro, @DataCadastro);SELECT CAST(scope_identity() AS int)";
+
+
                 command.Parameters.AddWithValue("@Nome", usuario.Nome);
                 command.Parameters.AddWithValue("@Email", usuario.Email);
                 command.Parameters.AddWithValue("@Sexo", usuario.Sexo);
-                command.Parameters.AddWithValue("@RG", usuario.Rg);
+                command.Parameters.AddWithValue("@RG", usuario.RG);
                 command.Parameters.AddWithValue("@CPF", usuario.CPF);
                 command.Parameters.AddWithValue("@NomeMae", usuario.NomeMae);
                 command.Parameters.AddWithValue("@SituacaoCadastro", usuario.SituacaoCadastro);
                 command.Parameters.AddWithValue("@DataCadastro", usuario.DataCadastro);
 
-                _connection.Open();
+
                 usuario.Id = (int)command.ExecuteScalar();
 
-                command.CommandText = "INSERT INTO Contatos (UsuarioId, Telefone, Celular) VALUES (@UsuarioId, @Telefone, @Celular); SELECT CAST(scope_identity() AS int) ";
+                command.CommandText = "INSERT INTO Contatos (UsuarioId, Telefone, Celular) VALUES (@UsuarioId, @Telefone, @Celular); SELECT CAST(scope_identity() AS int)";
                 command.Parameters.AddWithValue("@UsuarioId", usuario.Id);
                 command.Parameters.AddWithValue("@Telefone", usuario.Contato.Telefone);
                 command.Parameters.AddWithValue("@Celular", usuario.Contato.Celular);
-                usuario.Contato.Id = (int)command.ExecuteScalar();
+
                 usuario.Contato.UsuarioId = usuario.Id;
+                usuario.Contato.Id = (int)command.ExecuteScalar();
 
-                foreach (var item in usuario.EnderecosEntrega)
-                {
-                    command.CommandText = "INSERT INTO EnderecosEntrega (UsuarioId, NomeEndereco, CEP, Estado, Cidade, Bairro, Endereco, Numero, Complemento) " +
-                            " VALUES (@UsuarioId, @NomeEndereco, @CEP, @Estado, @Cidade, @Bairro, @Endereco, @Numero, @Complemento); SELECT CAST(scope_identity() AS int) ";
-
-                    //command.Parameters.AddWithValue("@UsuarioId", usuario.Id);
-                    command.Parameters.AddWithValue("@NomeEndereco", item.NomeEndereco);
-                    command.Parameters.AddWithValue("@CEP", item.CEP);
-                    command.Parameters.AddWithValue("@Estado", item.Estado);
-                    command.Parameters.AddWithValue("@Cidade", item.Cidade);
-                    command.Parameters.AddWithValue("@Bairro", item.Bairro);
-                    command.Parameters.AddWithValue("@Endereco", item.Endereco);
-                    command.Parameters.AddWithValue("@Numero", item.Numero);
-                    command.Parameters.AddWithValue("@Complemento", item.Complemento);
-
-                    item.Id = (int)command.ExecuteScalar(); 
-                    item.UsuarioId = usuario.Id;
-                }
-
-                foreach(var item in usuario.Departamentos)
+                foreach (var endereco in usuario.EnderecosEntrega)
                 {
                     command = new SqlCommand();
                     command.Connection = (SqlConnection)_connection;
+                    command.Transaction = transaction;
 
-                    command.CommandText = "INSERT INTO UsuariosDepartamentos (UsuarioId, DepartamentoId) " +
-                            " VALUES (@UsuarioId, @DepartamentoId) ";
-
+                    command.CommandText = "INSERT INTO EnderecosEntrega (UsuarioId, NomeEndereco, CEP, Estado, Cidade, Bairro, Endereco, Numero, Complemento) VALUES (@UsuarioId, @NomeEndereco, @CEP, @Estado, @Cidade, @Bairro, @Endereco, @Numero, @Complemento); SELECT CAST(scope_identity() AS int)";
                     command.Parameters.AddWithValue("@UsuarioId", usuario.Id);
-                    command.Parameters.AddWithValue("@DepartamentoId", item.Id);
+                    command.Parameters.AddWithValue("@NomeEndereco", endereco.NomeEndereco);
+                    command.Parameters.AddWithValue("@CEP", endereco.CEP);
+                    command.Parameters.AddWithValue("@Estado", endereco.Estado);
+                    command.Parameters.AddWithValue("@Cidade", endereco.Cidade);
+                    command.Parameters.AddWithValue("@Bairro", endereco.Bairro);
+                    command.Parameters.AddWithValue("@Endereco", endereco.Endereco);
+                    command.Parameters.AddWithValue("@Numero", endereco.Numero);
+                    command.Parameters.AddWithValue("@Complemento", endereco.Complemento);
 
-                   command.ExecuteNonQuery();
+                    endereco.Id = (int)command.ExecuteScalar();
+                    endereco.UsuarioId = usuario.Id;
                 }
 
+                foreach (var departamento in usuario.Departamentos)
+                {
+                    command = new SqlCommand();
+                    command.Connection = (SqlConnection)_connection;
+                    command.Transaction = transaction;
+
+                    command.CommandText = "INSERT INTO UsuariosDepartamentos (UsuarioId, DepartamentoId) VALUES (@UsuarioId, @DepartamentoId);";
+                    command.Parameters.AddWithValue("@UsuarioId", usuario.Id);
+                    command.Parameters.AddWithValue("@DepartamentoId", departamento.Id);
+
+                    command.ExecuteNonQuery();
+                }
+
+                transaction.Commit();
+            }
+            catch (Exception ex)
+            {
+                try
+                {
+                    transaction.Rollback();
+                }
+                catch (Exception)
+                {
+                    //Adicionar no log que o Rollback falhou.
+                }
+
+                throw new Exception("Erro ao tentar inserir os dados!");
             }
             finally
             {
@@ -226,13 +248,16 @@ namespace eCommerce.API.Repositories
 
         public void Update(Usuario usuario)
         {
+            _connection.Open();
+            SqlTransaction transaction = (SqlTransaction)_connection.BeginTransaction();
             try
             {
+                #region Usuario
                 SqlCommand command = new SqlCommand();
-                command.CommandText = "UPDATE Usuarios SET Nome = @Nome, Email = @Email, Sexo = @Sexo, RG = @RG, CPF = @CPF, NomeMae = @NomeMae, SituacaoCadastro = @SituacaoCadastro, DataCadastro = @DataCadastro WHERE Id = @Id";
+                command.CommandText = "UPDATE Usuarios SET Nome = @Nome, Email = @Email, Sexo = @Sexo, RG = @RG, CPF = @CPF, NomeMae = @NomeMae, SituacaoCadastro = @SituacaoCadastro, DataCadastro=@DataCadastro WHERE Id = @Id";
                 command.Connection = (SqlConnection)_connection;
+                command.Transaction = transaction;
 
-                command.Connection = (SqlConnection)_connection;
                 command.Parameters.AddWithValue("@Nome", usuario.Nome);
                 command.Parameters.AddWithValue("@Email", usuario.Email);
                 command.Parameters.AddWithValue("@Sexo", usuario.Sexo);
@@ -244,8 +269,91 @@ namespace eCommerce.API.Repositories
 
                 command.Parameters.AddWithValue("@Id", usuario.Id);
 
-                _connection.Open();
                 command.ExecuteNonQuery();
+                #endregion
+
+                #region Contato
+                command = new SqlCommand();
+                command.Connection = (SqlConnection)_connection;
+                command.Transaction = transaction;
+
+                command.CommandText = "UPDATE Contatos SET UsuarioId = @UsuarioId, Telefone = @Telefone, Celular = @Celular WHERE Id = @Id";
+
+                command.Parameters.AddWithValue("@UsuarioId", usuario.Id);
+                command.Parameters.AddWithValue("@Telefone", usuario.Contato.Telefone);
+                command.Parameters.AddWithValue("@Celular", usuario.Contato.Celular);
+
+                command.Parameters.AddWithValue("@Id", usuario.Contato.Id);
+
+                command.ExecuteNonQuery();
+                #endregion
+
+                #region Endereço de Entrega
+                command = new SqlCommand();
+                command.Connection = (SqlConnection)_connection;
+                command.Transaction = transaction;
+                command.CommandText = "DELETE FROM EnderecosEntrega WHERE UsuarioId = @UsuarioId";
+                command.Parameters.AddWithValue("@UsuarioId", usuario.Id);
+
+                command.ExecuteNonQuery();
+
+                foreach (var endereco in usuario.EnderecosEntrega)
+                {
+                    command = new SqlCommand();
+                    command.Connection = (SqlConnection)_connection;
+                    command.Transaction = transaction;
+
+                    command.CommandText = "INSERT INTO EnderecosEntrega (UsuarioId, NomeEndereco, CEP, Estado, Cidade, Bairro, Endereco, Numero, Complemento) VALUES (@UsuarioId, @NomeEndereco, @CEP, @Estado, @Cidade, @Bairro, @Endereco, @Numero, @Complemento); SELECT CAST(scope_identity() AS int)";
+                    command.Parameters.AddWithValue("@UsuarioId", usuario.Id);
+                    command.Parameters.AddWithValue("@NomeEndereco", endereco.NomeEndereco);
+                    command.Parameters.AddWithValue("@CEP", endereco.CEP);
+                    command.Parameters.AddWithValue("@Estado", endereco.Estado);
+                    command.Parameters.AddWithValue("@Cidade", endereco.Cidade);
+                    command.Parameters.AddWithValue("@Bairro", endereco.Bairro);
+                    command.Parameters.AddWithValue("@Endereco", endereco.Endereco);
+                    command.Parameters.AddWithValue("@Numero", endereco.Numero);
+                    command.Parameters.AddWithValue("@Complemento", endereco.Complemento);
+
+                    endereco.Id = (int)command.ExecuteScalar();
+                    endereco.UsuarioId = usuario.Id;
+                }
+
+                #endregion
+
+                #region Departamentos
+                command = new SqlCommand();
+                command.Connection = (SqlConnection)_connection;
+                command.Transaction = transaction;
+                command.CommandText = "DELETE FROM UsuariosDepartamentos WHERE UsuarioId = @UsuarioId";
+                command.Parameters.AddWithValue("@UsuarioId", usuario.Id);
+                command.ExecuteNonQuery();
+
+                foreach (var departamento in usuario.Departamentos)
+                {
+                    command = new SqlCommand();
+                    command.Connection = (SqlConnection)_connection;
+                    command.Transaction = transaction;
+
+                    command.CommandText = "INSERT INTO UsuariosDepartamentos (UsuarioId, DepartamentoId) VALUES (@UsuarioId, @DepartamentoId);";
+                    command.Parameters.AddWithValue("@UsuarioId", usuario.Id);
+                    command.Parameters.AddWithValue("@DepartamentoId", departamento.Id);
+
+                    command.ExecuteNonQuery();
+                }
+                #endregion
+                transaction.Commit();
+            }
+            catch (Exception e)
+            {
+                try
+                {
+                    transaction.Rollback();
+                }
+                catch (Exception ex)
+                {
+                    //Registrar no Log
+                }
+                throw new Exception("Erro não conseguimos atualizar os dados!");
             }
             finally
             {
