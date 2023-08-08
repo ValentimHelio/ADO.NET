@@ -251,10 +251,10 @@ namespace eCommerce.API.Repositories
             {
                 #region Usuario
                 SqlCommand command = new SqlCommand();
-                command.CommandText = "UPDATE Usuarios SET Nome = @Nome, Email = @Email, Sexo = @Sexo, RG = @RG, CPF = @CPF, NomeMae = @NomeMae, SituacaoCadastro = @SituacaoCadastro, DataCadastro=@DataCadastro WHERE Id = @Id";
                 command.Connection = (SqlConnection)_connection;
                 command.Transaction = transaction;
-
+                
+                command.CommandText = "UPDATE Usuarios SET Nome = @Nome, Email = @Email, Sexo = @Sexo, RG = @RG, CPF = @CPF, NomeMae = @NomeMae, SituacaoCadastro = @SituacaoCadastro, DataCadastro=@DataCadastro WHERE Id = @Id";
                 command.Parameters.AddWithValue("@Nome", usuario.Nome);
                 command.Parameters.AddWithValue("@Email", usuario.Email);
                 command.Parameters.AddWithValue("@Sexo", usuario.Sexo);
@@ -275,7 +275,6 @@ namespace eCommerce.API.Repositories
                 command.Transaction = transaction;
 
                 command.CommandText = "UPDATE Contatos SET UsuarioId = @UsuarioId, Telefone = @Telefone, Celular = @Celular WHERE Id = @Id";
-
                 command.Parameters.AddWithValue("@UsuarioId", usuario.Id);
                 command.Parameters.AddWithValue("@Telefone", usuario.Contato.Telefone);
                 command.Parameters.AddWithValue("@Celular", usuario.Contato.Celular);
@@ -338,6 +337,7 @@ namespace eCommerce.API.Repositories
                     command.ExecuteNonQuery();
                 }
                 #endregion
+
                 transaction.Commit();
             }
             catch (Exception e)

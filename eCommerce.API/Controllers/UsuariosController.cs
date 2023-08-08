@@ -51,18 +51,24 @@ namespace eCommerce.API.Controllers
                 _repository.Insert(usuario);
                 return Ok(usuario);
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 return StatusCode(500, ex.Message);
             }
-            
+
         }
 
         [HttpPut]
         public IActionResult Update([FromBody] Usuario usuario)
         {
-            _repository.Update(usuario);
-            return Ok(usuario);
+            try
+            {
+                _repository.Update(usuario);
+                return Ok(usuario);
+            }catch (Exception ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
         }
 
         [HttpDelete("{id}")]
